@@ -1,0 +1,16 @@
+{
+  "manifestVersion": 1,
+  "name": "CORTEX Neuro-Paste",
+  "version": "1.0.0",
+  "description": "Zero-latency paste tool for Logitech MX",
+  "author": "CORTEX Team",
+  "actions": [
+    {
+      "name": "paste_cycle",
+      "displayName": "Paste Cycle",
+      "type": "button",
+      "events": ["keyDown", "keyUp"],
+      "mouseEvents": ["mouseMove"]
+    }
+  ]
+}

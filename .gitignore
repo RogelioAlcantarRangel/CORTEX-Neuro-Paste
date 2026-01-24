@@ -6,6 +6,12 @@ __pycache__/
 # C extensions
 *.so
 
+#kilo
+.kilocode/
+.kilocodemodes
+.kilocodeignore
+
+
 # Distribution / packaging
 .Python
 build/
@@ -205,3 +211,171 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# kilocode_change
+.history/
+.aider*
+.docker-cache/
+
+# Test environment
+.test_env
+.vscode-test/
+# Default
+.changeset/**
+.github/**
+.husky/**
+.vscode/**
+coverage/**
+node_modules/**
+src/**
+scripts/**
+.gitignore
+esbuild.js
+jest.*
+**/tsconfig.json
+**/.eslintrc.json
+.prettierignore
+**/*.map
+**/*.ts
+**/.gitignore
+
+# Custom
+.env.sample
+.git-blame-ignore-revs
+.gitconfig
+.gitattributes
+.tool-versions
+.vite-port
+.nvmrc
+.clinerules*
+.kilocodemodes
+cline_docs/**
+coverage/**
+locales/**
+.roomodes
+.rooignore
+.roo/**
+benchmark/**
+docs/**
+e2e/**
+evals/**
+locales/**
+out/**
+ellipsis.yaml
+knip.json
+
+# Ignore all webview-ui files except the build directory.
+# https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/frameworks/hello-world-react-cra/.vscodeignore
+webview-ui/src/**
+webview-ui/public/**
+webview-ui/scripts/**
+webview-ui/index.html
+webview-ui/README.md
+webview-ui/package.json
+webview-ui/package-lock.json
+webview-ui/node_modules/**
+
+# Include codicons
+!node_modules/@vscode/codicons/dist/codicon.css
+!node_modules/@vscode/codicons/dist/codicon.ttf
+
+# Include material icons
+!node_modules/vscode-material-icons/generated/**
+
+# Include default themes JSON files used in getTheme
+!src/integrations/theme/default-themes/**
+
+# Ignore doc assets
+assets/docs/**
+
+# Include icons and images
+!assets/icons/**
+!assets/images/**
+
+# Include .env file for telemetry
+!.env
+
+# Ignore IntelliJ and Qodo plugin folders
+.idea/**
+.qodo/**
+
+.pnpm-store
+dist
+out
+out-*
+node_modules
+package-lock.json
+coverage/
+mock/
+.DS_Store
+*.orig
+
+# Builds
+bin/
+bin-unpacked/
+*.vsix
+
+# Local prompts and rules
+/local-prompts
+
+# Test environment
+.test_env
+.vscode-test/
+
+# Docs
+docs/_site/
+
+# Dotenv
+.env
+.env.*
+!.env.*.sample
+
+# Logging
+logs
+*.log
+
+# Vite development
+.vite-port
+
+# kilocode_change
+.history/
+.aider*
+.docker-cache/
+
+# Turborepo
+.turbo
+
+# IntelliJ and Qodo plugin folders
+.idea/
+.qodo/
+.vercel
+.roo/mcp.json
+
+# Nix / Direnv
+.direnv
+
+# Exclude Conport Directory (MCP server)
+context_portal/
+
+# Submodules
+deps/vscode/*
+!deps/vscode/.git
+
+# Qdrant
+qdrant_storage/
+
+# allow multiple local clones with different workspaces with different colors
+# to make it easier to work on features in parallel
+*.code-workspace
+
+# Act Secret Files
+.secrets
+# Architect plans
+./plans/
+# Default
+.changeset/**
+.github/**
+.husky/**
+.vscode/**
+coverage/**
+node_modules/**

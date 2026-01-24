@@ -1,108 +1,131 @@
-![alt text](https://img.shields.io/badge/Status-Prototype-green)
-![alt text](https://img.shields.io/badge/Stack-Node.js_|_Python_FastAPI-blue)
-![alt text](https://img.shields.io/badge/Latency-%3C16ms-red)
+# CORTEX: The Zero-Latency Interface for Logitech MX
 
-⚡ The Problem: The "AI Wait"
+## Vision & Philosophy
 
-In the current era of AI tools, productivity has a new friction: Latency.
-When a developer or creator wants to use AI (e.g., to refactor code or clean text), they have to:
+CORTEX introduces **"Speculative Execution"** (Action  Show  Refine) to replace "Wait Latency." It prioritizes immediate user feedback over system processing, adhering to the **Falling Edge Law**: providing visual feedback in .
 
-Copy text.
+### The Problem: The AI Wait-State
 
-Open a separate tool/window.
+In the current era of AI tools, productivity faces a new form of friction: latency. Users must copy text, open separate tools, wait for AI responses, and paste back. This process shatters the cognitive "flow" state.
 
-Paste & Wait.
+### The Solution: Neuro-Paste
 
-Copy result.
+CORTEX is a hybrid architecture (Logitech Plugin + Local Python Core) that eliminates cognitive load through the Falling Edge Law. It assumes user intent and executes immediately, refining the output in the background as the user maintains contact with the hardware.
 
-Paste back.
+---
 
-Even integrated plugins suffer from "Request Latency": you press a button, and nothing happens for 500ms while the API responds. This breaks the flow state.
+## Architecture
 
-🧠 The Solution: CORTEX Neuro-Paste
+### High-Level Diagram
 
-CORTEX is a hybrid architecture (Logi Plugin + Local Python Core) designed to eliminate cognitive load by adhering to a strict rule: The Downstroke Law.
-
-We don't ask the user to wait for the AI. We assume the user's intention and execute immediately, refining the result in the background.
-
-Key Features
-
-0ms Instant Paste: Pressing the button triggers a native OS paste immediately on the keyDown event. No lag.
-
-Speculative Refinement: If the button is held (>300ms), Cortex processes the clipboard content locally (cleaning JSON, formatting code, fixing grammar) and morphs the pasted text in real-time.
-
-Motion Safety: If the user moves the mouse during the "hold" phase, Cortex detects a context switch and cancels the refinement to prevent data loss.
-
-Privacy-First: All processing happens on localhost via a dedicated Python backend. No data leaves the machine.
-
-📐 Engineering Philosophy: The 16ms Imperative
-
-Most plugins feel "digital" because they wait for confirmation (API response, keyUp events). CORTEX feels "analog" because it acts on contact.
-
-We implemented a proprietary Downstroke-First Architecture:
-
-Speculative Execution: 100% of primary actions trigger on electrical contact (onKeyDown). We never force the user's brain to wait for a timer.
-
-Additive Intelligence: AI enhances the output after the output exists, never delaying it. The user sees the raw result instantly; the "smart" result follows seamlessly.
-
-Proprioceptive Contract: Visual feedback happens within the first 16ms (1 frame), ensuring the Logitech hardware feels like a physical instrument, not a remote control.
-
-🛠️ Technical Architecture
-
-CORTEX bypasses the limitations of standard web-based plugins by establishing a high-speed WebSocket tunnel to a native OS backend.
-
-code
-Mermaid
-download
-content_copy
-expand_less
+```mermaid
 graph LR
-    A[Logitech Hardware] -- onKeyDown --> B(Node.js Plugin)
-    B -- WebSocket (<2ms) --> C{CORTEX Core}
-    C -- Win32 API --> D[OS Clipboard]
-    C -- Local LLM/Script --> D
-The Stack
+    A[Logitech Hardware] --> B[Node.js Plugin]
+    B --WebSocket--> C[Python Core]
+    C --OS API--> D[Application]
 
-Frontend (Logi Plugin): Node.js / TypeScript. Handles raw input events and haptic feedback triggers.
+```
 
-Communication: Persistent WebSockets (Zero-Handshake delay).
+### Components
 
-Backend (The Brain): Python 3.10 + FastAPI + Uvicorn.
+* **Node.js Plugin**: A lightweight client based on the **Logitech Actions SDK**. It handles input events (`keyDown`, `keyUp`, `mouseMove`) and streams signals via WebSocket.
+* **Python Backend**: A **FastAPI/Uvicorn** server running on `localhost:8989`. It manages state, keystroke injection, and clipboard manipulation using native OS APIs.
 
-pyperclip / win32 for low-level OS clipboard manipulation.
+---
 
-pynput for sub-millisecond keystroke injection.
+## Installation
 
-Compiled to a standalone .exe for seamless deployment.
+1. **Clone the repository**: `git clone <repo-url>`
+2. **Install dependencies**: `pip install -r backend/requirements.txt`
+3. **Compile the executable**: `pyinstaller --onefile --noconsole backend/main.py` (this generates `dist/backend.exe`).
 
-🚀 Installation & Usage
-Prerequisites
+---
 
-Logitech Options+ installed.
+## Usage
 
-A Logitech MX device (Keyboard or Mouse).
+1. Run `backend.exe` (runs as a background service).
+2. Connect the Logitech plugin and map a device button to **"CORTEX Paste"**.
+3. **UX Flow**:
+* **keyDown**: Immediate Paste (equivalent to Ctrl+V).
+* **Hold (>300ms)**: Refines the pasted text (e.g., case conversion, formatting cleanup).
+* **mouseMove during hold**: Aborts the refinement to prevent unwanted data modification.
 
-Setup
 
-Download the latest release.
 
-Double-click install_cortex.bat (This installs the plugin profile and starts the silent background service).
+---
 
-Open Logitech Options+ and map any button to the "CORTEX Paste" Smart Action.
+## Configuration in Logitech Options+
 
-How to use
+1. **Install Logitech Options+**: Download and install from the official Logitech site if not already present.
+2. **Copy the Plugin**: Copy the entire `plugin/` folder to the Logitech Options+ plugins directory (typically `C:\Users\[User]\AppData\Local\Logitech\Logitech Options\Plugins\`).
+3. **Restart Logitech Options+**: Close and reopen the application to detect the new plugin.
+4. **Configure the Device**:
+* Select your Logitech MX device.
+* Create a new custom action.
+* Choose **"CORTEX Neuro-Paste"** as the action.
+* Assign the **"paste_cycle"** action to an MX device button (e.g., Easy-Switch or any programmable button).
 
-Click: Works exactly like Ctrl+V (Instant).
 
-Click & Hold: Watch your messy text automatically format itself into clean code/prose before your eyes.
+5. **Verify**: The plugin should automatically connect to the Python backend running on `localhost:8989`.
 
-🔮 Future Roadmap
+> **Note**: Ensure the backend is running before using the plugin. The plugin acts as a trigger, sending events via WebSocket to the backend.
 
-Context Awareness: Using the active window handle (IDE vs Browser) to decide how to format the text (e.g., Python indentation vs Email tone).
+---
 
-MX Ink Integration: applying the "Downstroke Law" to spatial drawing (Instant Ink).
+## Technical Script for Video Demo: Speculative Execution
 
-Local LLM Support: Swapping regex-based cleaning for a local Llama-3 model for complex text refactoring with zero latency.
+### Introduction (0:00 - 0:30)
 
-Built for the Logitech DevStudio 2026 Hackathon.
-An experiment in neuro-ergonomics.
+"Welcome to CORTEX, the zero-latency interface for Logitech MX. Today, we will demonstrate the concept of 'Speculative Execution': a system that anticipates user intent, displays immediate results, and refines them in the background."
+
+### High-Level Architecture (0:30 - 1:00)
+
+*Display Mermaid diagram.*
+"CORTEX combines the Logitech Actions SDK with a local Python backend via WebSocket. The plugin is a lightweight client handling input events, while the backend manages state logic and clipboard manipulation."
+
+### Speculative Execution Flow (1:00 - 2:30)
+
+* **Step 1: Immediate Trigger (keyDown)**: "Upon pressing the button, the plugin sends 'paste_cycle' via WebSocket. The backend responds in  by simulating Ctrl+V. The user sees the paste immediately—no waiting."
+* **Step 2: Asynchronous Processing**: "Simultaneously, the backend reads the clipboard, processes the text (e.g., converting to uppercase), and writes it back. This occurs in  without blocking the flow."
+* **Step 3: Conditional Refinement (Hold >300ms)**: "If the user holds the button, the plugin sends 'replace'. The backend simulates Select All + Paste, applying the refined text. Total latency remains ."
+* **Step 4: Safety (mouseMove)**: "Moving the mouse during the hold sends an 'abort' signal, canceling the refinement to prevent data loss."
+
+### Technical Demo (2:30 - 3:30)
+
+* Execute `backend.exe`.
+* Show button configuration in Logitech Options+.
+* Copy text to clipboard.
+* **Press button**: Immediate paste.
+* **Hold**: Text transforms instantly.
+* **Move mouse**: Refinement cancels.
+
+### Benefits & Latency (3:30 - 4:00)
+
+"CORTEX eliminates cognitive load by adhering to the Falling Edge Law: visual feedback on `keyDown`. Measured latency is , well within the hardware's polling rate."
+
+### Conclusion (4:00 - 4:30)
+
+"CORTEX redefines human-machine interaction by prioritizing neuro-ergonomics. Thank you for watching."
+
+---
+
+## Tech Stack & Dependencies
+
+* **Backend**: Python 3.10+, FastAPI, Uvicorn, `pyperclip`/`win32clipboard`, `pynput`.
+* **Frontend**: Node.js (Logitech SDK).
+* **Communication**: Local WebSocket.
+* **Deployment**: Compiled via PyInstaller.
+
+For advanced technical details, see [`docs/manifesto.md`](https://www.google.com/search?q=docs/manifesto.md).
+
+## Roadmap
+
+* **Context Awareness**: Formatting logic based on the active window (e.g., code snippets for IDEs vs. rich text for Word).
+* **MX Ink Integration**: Supporting spatial input refinement.
+* **Local LLM Support**: Privacy-first processing using on-device models.
+
+Built for **Logitech DevStudio 2026 Hackathon**. An experiment in neuro-ergonomics.
+
+---
+
+Would you like me to create the content for the **manifesto.md** mentioned in the documentation?
