@@ -33,7 +33,7 @@ async def audit_paste_cycle():
                 await asyncio.sleep(0.001)
                 elapsed += 0.001
 
-            print("❌ Timeout: El clipboard no fue procesado dentro del tiempo límite.")
+            print("ERROR: Timeout: El clipboard no fue procesado dentro del tiempo límite.")
             return None
     except Exception as e:
         print(f"Error en auditoría: {e}")
@@ -44,9 +44,18 @@ async def test_commit():
     try:
         async with websockets.connect(WS_URL) as ws:
             await ws.send(json.dumps({"action": "commit"}))
-            print("✅ Enviado 'commit': No debería realizar ninguna acción (validado por ausencia de errores).")
+            print("OK: Enviado 'commit': No debería realizar ninguna acción (validado por ausencia de errores).")
     except Exception as e:
         print(f"Error en test commit: {e}")
+
+async def test_replace():
+    """Prueba que 'replace' realice select_all + paste."""
+    try:
+        async with websockets.connect(WS_URL) as ws:
+            await ws.send(json.dumps({"action": "replace"}))
+            print("OK: Enviado 'replace': Debería realizar select_all + paste (validado por ausencia de errores).")
+    except Exception as e:
+        print(f"Error en test replace: {e}")
 
 async def validate_no_blocking():
     """Valida que Step B no bloquee Step A: Envío debe ser inmediato."""
@@ -60,11 +69,11 @@ async def validate_no_blocking():
             end = time.perf_counter()
             total_send_time = (end - start) * 1000
             avg_send_time = total_send_time / len(messages)
-            print(f"✅ Envío de {len(messages)} mensajes en {total_send_time:.2f} ms (promedio {avg_send_time:.2f} ms por mensaje)")
+            print(f"OK: Envío de {len(messages)} mensajes en {total_send_time:.2f} ms (promedio {avg_send_time:.2f} ms por mensaje)")
             if avg_send_time < 1:  # Arbitrario, pero envío debe ser <1ms
-                print("✅ No hay bloqueo detectable en el envío.")
+                print("OK: No hay bloqueo detectable en el envío.")
             else:
-                print("❌ Posible bloqueo en el envío.")
+                print("ERROR: Posible bloqueo en el envío.")
     except Exception as e:
         print(f"Error en validación de no bloqueo: {e}")
 
@@ -82,13 +91,17 @@ async def main():
     latency = await audit_paste_cycle()
     if latency is not None:
         if latency < 16:
-            print("✅ Latencia total < 16ms: Cumple con la Ley del Flanco de Bajada.")
+            print("OK: Latencia total < 16ms: Cumple con la Ley del Flanco de Bajada.")
         else:
-            print("❌ Latencia total >= 16ms: Falla la Ley del Flanco de Bajada.")
+            print("ERROR: Latencia total >= 16ms: Falla la Ley del Flanco de Bajada.")
     print()
 
     # Test commit
     await test_commit()
+    print()
+
+    # Test replace
+    await test_replace()
     print()
 
     print("Auditoría completada. Verificar prints del backend para Paso A <16ms.")

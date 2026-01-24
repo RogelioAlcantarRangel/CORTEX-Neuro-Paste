@@ -60,52 +60,44 @@ graph LR
 2. **Copy the Plugin**: Copy the entire `plugin/` folder to the Logitech Options+ plugins directory (typically `C:\Users\[User]\AppData\Local\Logitech\Logitech Options\Plugins\`).
 3. **Restart Logitech Options+**: Close and reopen the application to detect the new plugin.
 4. **Configure the Device**:
-* Select your Logitech MX device.
-* Create a new custom action.
-* Choose **"CORTEX Neuro-Paste"** as the action.
-* Assign the **"paste_cycle"** action to an MX device button (e.g., Easy-Switch or any programmable button).
+   * Open Logitech Options+ and select your Logitech MX device.
+   * Navigate to the "Actions" tab and click "Add Action".
+   * Select "Custom Action" and choose "Run Plugin".
+   * From the plugin list, select **"CORTEX Neuro-Paste"**.
+   * Assign the action to a programmable button (e.g., the thumb button or Easy-Switch).
+   * In the plugin settings, ensure the WebSocket URL is set to `ws://localhost:8989/cortex` (default).
+5. **Verify Connection**: Launch the backend (`backend.exe`) and check the console for "WebSocket connection established". The plugin will attempt to connect automatically upon device button press.
 
-
-5. **Verify**: The plugin should automatically connect to the Python backend running on `localhost:8989`.
-
-> **Note**: Ensure the backend is running before using the plugin. The plugin acts as a trigger, sending events via WebSocket to the backend.
+> **Note**: Ensure the backend is running before using the plugin. The plugin acts as a trigger, sending events via WebSocket to the backend. If connection fails, verify firewall settings allow localhost connections.
 
 ---
 
-## Technical Script for Video Demo: Speculative Execution
+## Technical Script for Video Demo: Speculative Execution (Max 2 min)
 
-### Introduction (0:00 - 0:30)
+### Introduction (0:00 - 0:15)
+"Welcome to CORTEX: Zero-Latency Interface for Logitech MX. Demonstrating 'Speculative Execution' – anticipate, show, refine."
 
-"Welcome to CORTEX, the zero-latency interface for Logitech MX. Today, we will demonstrate the concept of 'Speculative Execution': a system that anticipates user intent, displays immediate results, and refines them in the background."
-
-### High-Level Architecture (0:30 - 1:00)
-
+### Architecture Overview (0:15 - 0:45)
 *Display Mermaid diagram.*
-"CORTEX combines the Logitech Actions SDK with a local Python backend via WebSocket. The plugin is a lightweight client handling input events, while the backend manages state logic and clipboard manipulation."
+"CORTEX integrates Logitech Actions SDK with local Python backend via WebSocket. Plugin triggers events; backend executes OS-level actions."
 
-### Speculative Execution Flow (1:00 - 2:30)
+### Speculative Execution Flow (0:45 - 1:30)
+* **Immediate Trigger (keyDown)**: Button press sends 'paste_cycle'. Backend fires Ctrl+V in <5ms – user sees paste instantly.
+* **Async Refinement**: Background processing converts text (e.g., uppercase) in <10ms, no UI block.
+* **Conditional Replace (Hold)**: Hold >300ms sends 'replace'; backend applies refined text via Select All + Paste.
+* **Safety Abort**: Mouse move cancels refinement, preventing data loss.
 
-* **Step 1: Immediate Trigger (keyDown)**: "Upon pressing the button, the plugin sends 'paste_cycle' via WebSocket. The backend responds in  by simulating Ctrl+V. The user sees the paste immediately—no waiting."
-* **Step 2: Asynchronous Processing**: "Simultaneously, the backend reads the clipboard, processes the text (e.g., converting to uppercase), and writes it back. This occurs in  without blocking the flow."
-* **Step 3: Conditional Refinement (Hold >300ms)**: "If the user holds the button, the plugin sends 'replace'. The backend simulates Select All + Paste, applying the refined text. Total latency remains ."
-* **Step 4: Safety (mouseMove)**: "Moving the mouse during the hold sends an 'abort' signal, canceling the refinement to prevent data loss."
+### Latency Compliance (1:30 - 1:45)
+"Total loop <16ms, matching hardware polling rate. Eliminates cognitive wait-state."
 
-### Technical Demo (2:30 - 3:30)
+### Live Demo (1:45 - 2:00)
+* Run backend.exe.
+* Configure button in Logitech Options+.
+* Copy text, press button: instant paste.
+* Hold: text refines.
+* Move mouse: aborts safely.
 
-* Execute `backend.exe`.
-* Show button configuration in Logitech Options+.
-* Copy text to clipboard.
-* **Press button**: Immediate paste.
-* **Hold**: Text transforms instantly.
-* **Move mouse**: Refinement cancels.
-
-### Benefits & Latency (3:30 - 4:00)
-
-"CORTEX eliminates cognitive load by adhering to the Falling Edge Law: visual feedback on `keyDown`. Measured latency is , well within the hardware's polling rate."
-
-### Conclusion (4:00 - 4:30)
-
-"CORTEX redefines human-machine interaction by prioritizing neuro-ergonomics. Thank you for watching."
+"Neuro-ergonomics redefined. Thank you."
 
 ---
 
