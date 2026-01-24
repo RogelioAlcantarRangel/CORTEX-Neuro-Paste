@@ -1,4 +1,5 @@
 from pynput.keyboard import Controller, Key
+import win32gui
 
 controller = Controller()
 
@@ -13,3 +14,7 @@ def simulate_select_all() -> None:
     with controller.pressed(Key.ctrl):
         controller.press('a')
         controller.release('a')
+
+def get_active_window_hwnd() -> int:
+    """Obtiene el HWND de la ventana activa."""
+    return win32gui.GetForegroundWindow()

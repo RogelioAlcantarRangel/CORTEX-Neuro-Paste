@@ -3,6 +3,9 @@ import json
 import time
 import pyperclip
 import websockets
+import subprocess
+import win32gui
+import win32con
 
 WS_URL = "ws://localhost:8989/cortex"
 
@@ -57,6 +60,41 @@ async def test_replace():
     except Exception as e:
         print(f"Error en test replace: {e}")
 
+async def test_abort_prevents_replace():
+    """Prueba el escenario 'Abort on Move': paste_cycle -> abort -> replace, verifica si replace se ejecuta."""
+    # Preparar clipboard
+    test_text = "test abort"
+    pyperclip.copy(test_text)
+    print(f"Clipboard preparado: '{test_text}'")
+
+    try:
+        async with websockets.connect(WS_URL) as ws:
+            # Enviar paste_cycle
+            await ws.send(json.dumps({"action": "paste_cycle"}))
+            print("Enviado 'paste_cycle'")
+
+            # Esperar un poco (simulando tiempo de hold)
+            await asyncio.sleep(0.1)
+
+            # Enviar abort (simulando mouseMove)
+            await ws.send(json.dumps({"action": "abort"}))
+            print("Enviado 'abort'")
+
+            # Esperar otro poco
+            await asyncio.sleep(0.1)
+
+            # Enviar replace
+            await ws.send(json.dumps({"action": "replace"}))
+            print("Enviado 'replace'")
+
+            # Esperar para que se procese
+            await asyncio.sleep(0.2)
+
+        print("Prueba completada. Verificar logs del backend para confirmar si 'Paso C latency' apareció después de 'replace'.")
+        print("Si abort funciona correctamente, replace no debería ejecutarse y no debería haber 'Paso C latency'.")
+    except Exception as e:
+        print(f"Error en test abort prevents replace: {e}")
+
 async def validate_no_blocking():
     """Valida que Step B no bloquee Step A: Envío debe ser inmediato."""
     # Enviar múltiples mensajes rápidamente
@@ -102,6 +140,10 @@ async def main():
 
     # Test replace
     await test_replace()
+    print()
+
+    # Test abort prevents replace
+    await test_abort_prevents_replace()
     print()
 
     print("Auditoría completada. Verificar prints del backend para Paso A <16ms.")

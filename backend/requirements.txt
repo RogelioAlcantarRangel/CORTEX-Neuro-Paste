@@ -3,3 +3,4 @@ uvicorn[standard]
 pynput
 pyperclip
 pyinstaller
+pywin32

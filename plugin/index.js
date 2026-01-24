@@ -6,6 +6,7 @@ class CortexPlugin {
     this.ws = null;
     this.isLongPress = false;
     this.timer = null;
+    this.lastMouseMove = 0;
     this.connectWS();
   }
 
@@ -44,6 +45,13 @@ class CortexPlugin {
   }
 
   onMouseMove() {
+    const now = Date.now();
+    // Umbral: ignorar movimientos menores a 100ms para evitar temblor
+    if (now - this.lastMouseMove < 100) {
+      return;
+    }
+    this.lastMouseMove = now;
+
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ action: 'abort' }));
     }
