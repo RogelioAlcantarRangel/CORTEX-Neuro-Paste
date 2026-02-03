@@ -107,13 +107,17 @@ async def websocket_endpoint(websocket: WebSocket):
 
 async def process_clipboard_async(websocket: WebSocket):
     """Paso B: Lee, procesa y escribe clipboard de forma asíncrona."""
-    text = read_clipboard()
-    processed = process_text(text)
-    write_clipboard(processed)
-    print("Paso B completado: clipboard procesado y escrito.")
-    # Señalar que el procesamiento terminó
-    if websocket in processing_events:
-        processing_events[websocket].set()
+    try:
+        text = read_clipboard()
+        processed = process_text(text)
+        write_clipboard(processed)
+        print("Paso B completado: clipboard procesado y escrito.")
+    except Exception as exc:
+        print(f"Error en Paso B: {exc}")
+    finally:
+        # Señalar que el procesamiento terminó
+        if websocket in processing_events:
+            processing_events[websocket].set()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

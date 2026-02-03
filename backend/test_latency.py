@@ -15,22 +15,23 @@ TEST_MESSAGE = {"action": "paste_cycle"}
 NUM_ITERATIONS = 100  # Número de iteraciones para estadísticas
 
 async def measure_rtt():
-    """Mide el Round Trip Time (RTT) del WebSocket."""
+    """Mide el Round Trip Time (RTT) del WebSocket usando ping/pong."""
     latencies = []
     try:
         async with websockets.connect(WS_URL) as websocket:
             logger.info(f"Conectado al WebSocket: {WS_URL}")
             for i in range(NUM_ITERATIONS):
                 start_time = time.time()
-                # Enviar mensaje
+                # Enviar mensaje (latencia de envío)
                 await websocket.send(json.dumps(TEST_MESSAGE))
                 logger.debug(f"Iteración {i+1}: Mensaje enviado: {TEST_MESSAGE}")
-                # Recibir respuesta
-                response = await websocket.recv()
+                # Medir RTT con ping/pong del protocolo
+                pong_waiter = await websocket.ping()
+                await pong_waiter
                 end_time = time.time()
                 rtt = (end_time - start_time) * 1000  # Convertir a ms
                 latencies.append(rtt)
-                logger.info(f"Iteración {i+1}: RTT = {rtt:.2f} ms, Respuesta: {response}")
+                logger.info(f"Iteración {i+1}: RTT = {rtt:.2f} ms")
                 # Pequeña pausa para evitar sobrecarga
                 await asyncio.sleep(0.01)
     except Exception as e:
