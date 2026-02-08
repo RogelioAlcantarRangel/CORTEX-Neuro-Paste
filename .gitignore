@@ -257,6 +257,7 @@ locales/**
 .roo/**
 benchmark/**
 docs/**
+!docs/manifesto.md
 e2e/**
 evals/**
 locales/**

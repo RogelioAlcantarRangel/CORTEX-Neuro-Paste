@@ -2,7 +2,7 @@
 
 ## Vision & Philosophy
 
-CORTEX introduces **"Speculative Execution"** (Action  Show  Refine) to replace "Wait Latency." It prioritizes immediate user feedback over system processing, adhering to the **Falling Edge Law**: providing visual feedback in .
+CORTEX introduces **"Speculative Execution"** (Action → Show → Refine) to replace "Wait Latency." It prioritizes immediate user feedback over system processing, adhering to the **Falling Edge Law**: providing visual feedback in under 16ms.
 
 ### The Problem: The AI Wait-State
 
@@ -108,7 +108,7 @@ graph LR
 * **Communication**: Local WebSocket.
 * **Deployment**: Compiled via PyInstaller.
 
-For advanced technical details, see [`docs/manifesto.md`](https://www.google.com/search?q=docs/manifesto.md).
+For advanced technical details, see [`docs/manifesto.md`](docs/manifesto.md).
 
 ## Roadmap
 
