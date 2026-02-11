@@ -130,7 +130,11 @@ class CortexPlugin {
   onKeyUp() {
     clearTimeout(this.timer);
     if (this.isLongPress && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ action: 'replace', cycle_id: this.currentCycleId }));
+      const payload = { action: 'replace' };
+      if (Number.isInteger(this.currentCycleId)) {
+        payload.cycle_id = this.currentCycleId;
+      }
+      this.ws.send(JSON.stringify(payload));
     }
     this.isLongPress = false;
   }
@@ -143,7 +147,11 @@ class CortexPlugin {
     this.lastMouseMove = now;
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ action: 'abort', cycle_id: this.currentCycleId }));
+      const payload = { action: 'abort' };
+      if (Number.isInteger(this.currentCycleId)) {
+        payload.cycle_id = this.currentCycleId;
+      }
+      this.ws.send(JSON.stringify(payload));
     }
     clearTimeout(this.timer);
     this.isLongPress = false;

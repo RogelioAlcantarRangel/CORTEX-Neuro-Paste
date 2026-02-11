@@ -103,6 +103,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 continue
 
             action = message.get("action")
+            requested_cycle_id = message.get("cycle_id")
 
             if action == "paste_cycle":
                 connection_cycle_ids[websocket] += 1
@@ -143,6 +144,16 @@ async def websocket_endpoint(websocket: WebSocket):
                         websocket,
                         "NO_ACTIVE_CYCLE",
                         "No existe un ciclo activo. Ejecuta paste_cycle antes de replace.",
+                        action=action,
+                        cycle_id=cycle_id,
+                    )
+                    continue
+
+                if requested_cycle_id is not None and requested_cycle_id != cycle_id:
+                    await send_error(
+                        websocket,
+                        "CYCLE_MISMATCH",
+                        "cycle_id no coincide con el ciclo activo de la conexión.",
                         action=action,
                         cycle_id=cycle_id,
                     )
@@ -202,6 +213,16 @@ async def websocket_endpoint(websocket: WebSocket):
                         websocket,
                         "NO_ACTIVE_CYCLE",
                         "No existe un ciclo activo. Ejecuta paste_cycle antes de abort.",
+                        action=action,
+                        cycle_id=cycle_id,
+                    )
+                    continue
+
+                if requested_cycle_id is not None and requested_cycle_id != cycle_id:
+                    await send_error(
+                        websocket,
+                        "CYCLE_MISMATCH",
+                        "cycle_id no coincide con el ciclo activo de la conexión.",
                         action=action,
                         cycle_id=cycle_id,
                     )
