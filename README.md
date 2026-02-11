@@ -72,6 +72,43 @@ graph LR
 
 ---
 
+
+## Runtime Configuration
+
+### Backend (`backend/config.json`)
+
+The backend reads runtime configuration from `backend/config.json` at startup.
+
+```json
+{
+  "ws_host": "localhost",
+  "ws_port": 8989,
+  "transform_rules": ["uppercase"]
+}
+```
+
+- `ws_host`: Uvicorn bind host.
+- `ws_port`: Uvicorn bind port.
+- `transform_rules`: Ordered rules applied by `process_text`.
+
+### Plugin (`plugin/config.json`)
+
+The plugin reads local settings from `plugin/config.json`.
+
+```json
+{
+  "ws_url": "ws://localhost:8989/cortex",
+  "reconnect_ms": 1000,
+  "hold_threshold_ms": 300,
+  "mouse_abort_debounce_ms": 100
+}
+```
+
+- `ws_url`: Backend WebSocket endpoint.
+- `reconnect_ms`: Reconnect delay when socket closes.
+- `hold_threshold_ms`: Hold duration before triggering `replace` on key up.
+- `mouse_abort_debounce_ms`: Debounce for movement-triggered abort.
+
 ## Technical Script for Video Demo: Speculative Execution (Max 2 min)
 
 ### Introduction (0:00 - 0:15)

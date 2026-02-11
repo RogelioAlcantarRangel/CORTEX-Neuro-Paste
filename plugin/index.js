@@ -1,5 +1,50 @@
+const fs = require('fs');
+const path = require('path');
 const WebSocket = require('ws');
 const robot = require('robotjs');
+
+const DEFAULT_CONFIG = {
+  ws_url: 'ws://localhost:8989/cortex',
+  reconnect_ms: 1000,
+  hold_threshold_ms: 300,
+  mouse_abort_debounce_ms: 100,
+};
+
+function loadPluginConfig() {
+  const configPath = path.join(__dirname, 'config.json');
+  try {
+    const raw = fs.readFileSync(configPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return { ...DEFAULT_CONFIG };
+    }
+
+    const config = { ...DEFAULT_CONFIG };
+
+    if (typeof parsed.ws_url === 'string' && parsed.ws_url.trim()) {
+      config.ws_url = parsed.ws_url.trim();
+    }
+
+    const reconnectMs = Number(parsed.reconnect_ms);
+    if (Number.isInteger(reconnectMs) && reconnectMs > 0) {
+      config.reconnect_ms = reconnectMs;
+    }
+
+    const holdThresholdMs = Number(parsed.hold_threshold_ms);
+    if (Number.isInteger(holdThresholdMs) && holdThresholdMs > 0) {
+      config.hold_threshold_ms = holdThresholdMs;
+    }
+
+    const abortDebounceMs = Number(parsed.mouse_abort_debounce_ms);
+    if (Number.isInteger(abortDebounceMs) && abortDebounceMs >= 0) {
+      config.mouse_abort_debounce_ms = abortDebounceMs;
+    }
+
+    return config;
+  } catch (err) {
+    return { ...DEFAULT_CONFIG };
+  }
+}
 
 class CortexPlugin {
   constructor() {
@@ -8,11 +53,12 @@ class CortexPlugin {
     this.timer = null;
     this.lastMouseMove = 0;
     this.currentCycleId = null;
+    this.config = loadPluginConfig();
     this.connectWS();
   }
 
   connectWS() {
-    this.ws = new WebSocket('ws://localhost:8989/cortex');
+    this.ws = new WebSocket(this.config.ws_url);
 
     this.ws.on('open', () => {
       console.log('WebSocket connected to backend');
@@ -28,7 +74,7 @@ class CortexPlugin {
 
     this.ws.on('close', () => {
       console.log('WebSocket closed, reconnecting...');
-      setTimeout(() => this.connectWS(), 1000);
+      setTimeout(() => this.connectWS(), this.config.reconnect_ms);
     });
   }
 
@@ -41,7 +87,9 @@ class CortexPlugin {
       return;
     }
 
-    const { type, action, phase, code, cycle_id: cycleId } = message;
+    const {
+      type, action, phase, code, cycle_id: cycleId,
+    } = message;
 
     if (cycleId !== undefined && cycleId !== null) {
       this.currentCycleId = cycleId;
@@ -67,7 +115,8 @@ class CortexPlugin {
 
   onKeyDown() {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ action: 'paste_cycle', cycle_id: this.currentCycleId }));
+      this.currentCycleId = null;
+      this.ws.send(JSON.stringify({ action: 'paste_cycle' }));
     } else {
       // Fallback: simulate native paste (Ctrl+V)
       robot.keyTap('v', 'control');
@@ -75,27 +124,34 @@ class CortexPlugin {
 
     this.timer = setTimeout(() => {
       this.isLongPress = true;
-    }, 300);
+    }, this.config.hold_threshold_ms);
   }
 
   onKeyUp() {
     clearTimeout(this.timer);
     if (this.isLongPress && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ action: 'replace', cycle_id: this.currentCycleId }));
+      const payload = { action: 'replace' };
+      if (Number.isInteger(this.currentCycleId)) {
+        payload.cycle_id = this.currentCycleId;
+      }
+      this.ws.send(JSON.stringify(payload));
     }
     this.isLongPress = false;
   }
 
   onMouseMove() {
     const now = Date.now();
-    // Umbral: ignorar movimientos menores a 100ms para evitar temblor
-    if (now - this.lastMouseMove < 100) {
+    if (now - this.lastMouseMove < this.config.mouse_abort_debounce_ms) {
       return;
     }
     this.lastMouseMove = now;
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ action: 'abort', cycle_id: this.currentCycleId }));
+      const payload = { action: 'abort' };
+      if (Number.isInteger(this.currentCycleId)) {
+        payload.cycle_id = this.currentCycleId;
+      }
+      this.ws.send(JSON.stringify(payload));
     }
     clearTimeout(this.timer);
     this.isLongPress = false;

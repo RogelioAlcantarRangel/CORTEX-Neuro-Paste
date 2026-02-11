@@ -10,8 +10,12 @@ import win32gui
 
 from input_sim import simulate_paste, simulate_select_all, get_active_window_hwnd
 from clipboard_mgr import read_clipboard, write_clipboard, process_text
+from config import load_config
 
 app = FastAPI()
+
+CONFIG = load_config()
+TRANSFORM_RULES = CONFIG["transform_rules"]
 
 # Estado por conexión
 window_states = {}
@@ -99,6 +103,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 continue
 
             action = message.get("action")
+            requested_cycle_id = message.get("cycle_id")
 
             if action == "paste_cycle":
                 connection_cycle_ids[websocket] += 1
@@ -133,6 +138,26 @@ async def websocket_endpoint(websocket: WebSocket):
             elif action == "replace":
                 cycle_id = connection_cycle_ids.get(websocket)
                 await send_ack(websocket, action, cycle_id)
+
+                if not cycle_id:
+                    await send_error(
+                        websocket,
+                        "NO_ACTIVE_CYCLE",
+                        "No existe un ciclo activo. Ejecuta paste_cycle antes de replace.",
+                        action=action,
+                        cycle_id=cycle_id,
+                    )
+                    continue
+
+                if requested_cycle_id is not None and requested_cycle_id != cycle_id:
+                    await send_error(
+                        websocket,
+                        "CYCLE_MISMATCH",
+                        "cycle_id no coincide con el ciclo activo de la conexión.",
+                        action=action,
+                        cycle_id=cycle_id,
+                    )
+                    continue
 
                 current_hwnd = get_active_window_hwnd()
                 stored_hwnd = window_states.get(websocket)
@@ -181,9 +206,30 @@ async def websocket_endpoint(websocket: WebSocket):
 
             elif action == "abort":
                 cycle_id = connection_cycle_ids.get(websocket)
+                await send_ack(websocket, action, cycle_id)
+
+                if not cycle_id:
+                    await send_error(
+                        websocket,
+                        "NO_ACTIVE_CYCLE",
+                        "No existe un ciclo activo. Ejecuta paste_cycle antes de abort.",
+                        action=action,
+                        cycle_id=cycle_id,
+                    )
+                    continue
+
+                if requested_cycle_id is not None and requested_cycle_id != cycle_id:
+                    await send_error(
+                        websocket,
+                        "CYCLE_MISMATCH",
+                        "cycle_id no coincide con el ciclo activo de la conexión.",
+                        action=action,
+                        cycle_id=cycle_id,
+                    )
+                    continue
+
                 abort_flags[websocket] = True
                 print("Abort recibido: flag activado")
-                await send_ack(websocket, action, cycle_id)
                 await send_status(websocket, "abort_set", cycle_id)
 
             else:
@@ -212,7 +258,7 @@ async def process_clipboard_async(websocket: WebSocket, cycle_id: int):
     """Paso B: Lee, procesa y escribe clipboard de forma asíncrona."""
     try:
         text = read_clipboard()
-        processed = process_text(text)
+        processed = process_text(text, rules=TRANSFORM_RULES)
         write_clipboard(processed)
         print("Paso B completado: clipboard procesado y escrito.")
         await send_status(websocket, "step_b_done", cycle_id)
@@ -231,4 +277,4 @@ async def process_clipboard_async(websocket: WebSocket, cycle_id: int):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-    uvicorn.run(app, host="localhost", port=8989, log_config=None)
+    uvicorn.run(app, host=CONFIG["ws_host"], port=CONFIG["ws_port"], log_config=None)
