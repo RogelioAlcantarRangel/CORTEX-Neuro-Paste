@@ -1,0 +1,6 @@
+{
+  "ws_url": "ws://localhost:8989/cortex",
+  "reconnect_ms": 1000,
+  "hold_threshold_ms": 300,
+  "mouse_abort_debounce_ms": 100
+}
