@@ -25,16 +25,19 @@ function loadPluginConfig() {
       config.ws_url = parsed.ws_url.trim();
     }
 
-    if (Number.isInteger(parsed.reconnect_ms) && parsed.reconnect_ms > 0) {
-      config.reconnect_ms = parsed.reconnect_ms;
+    const reconnectMs = Number(parsed.reconnect_ms);
+    if (Number.isInteger(reconnectMs) && reconnectMs > 0) {
+      config.reconnect_ms = reconnectMs;
     }
 
-    if (Number.isInteger(parsed.hold_threshold_ms) && parsed.hold_threshold_ms > 0) {
-      config.hold_threshold_ms = parsed.hold_threshold_ms;
+    const holdThresholdMs = Number(parsed.hold_threshold_ms);
+    if (Number.isInteger(holdThresholdMs) && holdThresholdMs > 0) {
+      config.hold_threshold_ms = holdThresholdMs;
     }
 
-    if (Number.isInteger(parsed.mouse_abort_debounce_ms) && parsed.mouse_abort_debounce_ms >= 0) {
-      config.mouse_abort_debounce_ms = parsed.mouse_abort_debounce_ms;
+    const abortDebounceMs = Number(parsed.mouse_abort_debounce_ms);
+    if (Number.isInteger(abortDebounceMs) && abortDebounceMs >= 0) {
+      config.mouse_abort_debounce_ms = abortDebounceMs;
     }
 
     return config;
@@ -112,7 +115,8 @@ class CortexPlugin {
 
   onKeyDown() {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ action: 'paste_cycle', cycle_id: this.currentCycleId }));
+      this.currentCycleId = null;
+      this.ws.send(JSON.stringify({ action: 'paste_cycle' }));
     } else {
       // Fallback: simulate native paste (Ctrl+V)
       robot.keyTap('v', 'control');

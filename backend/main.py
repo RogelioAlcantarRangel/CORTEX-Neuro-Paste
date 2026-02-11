@@ -138,6 +138,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 cycle_id = connection_cycle_ids.get(websocket)
                 await send_ack(websocket, action, cycle_id)
 
+                if not cycle_id:
+                    await send_error(
+                        websocket,
+                        "NO_ACTIVE_CYCLE",
+                        "No existe un ciclo activo. Ejecuta paste_cycle antes de replace.",
+                        action=action,
+                        cycle_id=cycle_id,
+                    )
+                    continue
+
                 current_hwnd = get_active_window_hwnd()
                 stored_hwnd = window_states.get(websocket)
                 if current_hwnd != stored_hwnd:
@@ -185,9 +195,20 @@ async def websocket_endpoint(websocket: WebSocket):
 
             elif action == "abort":
                 cycle_id = connection_cycle_ids.get(websocket)
+                await send_ack(websocket, action, cycle_id)
+
+                if not cycle_id:
+                    await send_error(
+                        websocket,
+                        "NO_ACTIVE_CYCLE",
+                        "No existe un ciclo activo. Ejecuta paste_cycle antes de abort.",
+                        action=action,
+                        cycle_id=cycle_id,
+                    )
+                    continue
+
                 abort_flags[websocket] = True
                 print("Abort recibido: flag activado")
-                await send_ack(websocket, action, cycle_id)
                 await send_status(websocket, "abort_set", cycle_id)
 
             else:
