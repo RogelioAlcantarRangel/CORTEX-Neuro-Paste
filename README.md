@@ -36,8 +36,30 @@ graph LR
 ## Installation
 
 1. **Clone the repository**: `git clone <repo-url>`
-2. **Install dependencies**: `pip install -r backend/requirements.txt`
-3. **Compile the executable**: `pyinstaller --onefile --noconsole backend/main.py` (this generates `dist/backend.exe`).
+2. **Install backend dependencies**: `pip install -r backend/requirements.txt`
+3. **Compile the backend executable**: `pyinstaller --onefile --noconsole backend/main.py` (this generates `dist/backend.exe`).
+
+### Plugin setup (Node.js / Logitech Options+)
+
+1. **Install Node.js compatible with Logitech Options+ plugin runtime**:
+   - Minimum supported for this plugin package: **Node.js 16.14+**.
+   - Recommended: use an active LTS release (`16.x`/`18.x`) when running local validation.
+2. **Install native build prerequisites (required by `robotjs`)**:
+   - **Windows**:
+     - Install **Visual Studio Build Tools 2022** with "Desktop development with C++".
+     - Install **Python 3.x** and ensure `python` is in `PATH`.
+     - Ensure `npm config get msvs_version` points to an installed Visual Studio toolchain if needed.
+   - **macOS**:
+     - `xcode-select --install`
+   - **Linux (Debian/Ubuntu)**:
+     - `sudo apt-get update && sudo apt-get install -y build-essential python3 make g++`
+3. **Install plugin dependencies deterministically**:
+   - `cd plugin`
+   - `npm ci`
+4. **Validate plugin before loading in Logitech Options+**:
+   - `npm run build` (syntax check for `index.js`)
+   - `npm run verify` (checks that `ws` and `robotjs` resolve at startup)
+5. Continue with the Logitech Options+ plugin copy/configuration steps below.
 
 ---
 
