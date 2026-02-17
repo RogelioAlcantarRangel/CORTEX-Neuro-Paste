@@ -99,13 +99,17 @@ The backend reads runtime configuration from `backend/config.json` at startup.
 {
   "ws_host": "localhost",
   "ws_port": 8989,
-  "transform_rules": ["uppercase"]
+  "transform_rules": ["uppercase"],
+  "log_level": "INFO",
+  "log_file": "backend/backend.log"
 }
 ```
 
 - `ws_host`: Uvicorn bind host.
 - `ws_port`: Uvicorn bind port.
 - `transform_rules`: Ordered rules applied by `process_text`.
+- `log_level`: Nivel de logs (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`).
+- `log_file`: Ruta del archivo sink para persistencia de logs estructurados.
 
 ### Plugin (`plugin/config.json`)
 
@@ -124,6 +128,39 @@ The plugin reads local settings from `plugin/config.json`.
 - `reconnect_ms`: Reconnect delay when socket closes.
 - `hold_threshold_ms`: Hold duration before triggering `replace` on key up.
 - `mouse_abort_debounce_ms`: Debounce for movement-triggered abort.
+
+
+## Operación y soporte
+
+### Códigos de error WS (troubleshooting rápido)
+
+| Código | Causa probable | Acción |
+|---|---|---|
+| `INVALID_JSON` | Payload JSON inválido | Validar serialización del plugin. |
+| `NO_ACTIVE_CYCLE` | Se invocó `replace/abort` sin `paste_cycle` | Ejecutar `paste_cycle` antes. |
+| `CYCLE_MISMATCH` | `cycle_id` desincronizado | Re-sincronizar ciclo en cliente. |
+| `WINDOW_MISMATCH` | Cambio de ventana activa | Mantener foco o reiniciar ciclo. |
+| `ABORTED` | Abort activado por movimiento/input | Reintentar sin movimiento durante hold. |
+| `UNKNOWN_ACTION` | Acción WS no soportada | Usar `paste_cycle`, `replace`, `abort`. |
+| `PROCESSING_FAILED` | Fallo en clipboard/procesamiento | Revisar permisos y `transform_rules`. |
+
+### Playbook soporte (síntoma → causa probable → acción)
+
+| Síntoma | Causa probable | Acción |
+|---|---|---|
+| Plugin no conecta | Backend apagado / puerto incorrecto | Ejecutar `python backend/health_check.py` y revisar `ws_host/ws_port`. |
+| Conecta pero no pega | Foco en ventana no editable | Cambiar foco y repetir. |
+| `replace` falla con `WINDOW_MISMATCH` | Cambio de foco entre pasos | Mantener foco fijo durante hold. |
+| `replace` falla con `ABORTED` | Señal abort durante hold | Reducir movimiento del mouse / ajustar debounce en plugin. |
+
+### Health check backend
+
+Script incluido: `python backend/health_check.py --host localhost --port 8989`
+
+Valida:
+1. Puerto TCP.
+2. Endpoint WebSocket `/cortex`.
+3. Handshake WebSocket (`HTTP 101`).
 
 ## Technical Script for Video Demo: Speculative Execution (Max 2 min)
 
