@@ -1,11 +1,27 @@
 import asyncio
 import json
-import time
 import logging
+import sys
+import time
 from itertools import count
 
 from fastapi import FastAPI, WebSocket
 import uvicorn
+
+from environment_check import EnvironmentValidationError, validate_runtime_environment
+
+
+def abort_startup(message: str) -> None:
+    """Finaliza el arranque con mensaje claro para el operador."""
+    print(f"ERROR DE ENTORNO: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+try:
+    validate_runtime_environment()
+except EnvironmentValidationError as exc:
+    abort_startup(str(exc))
+
 import win32gui
 
 from input_sim import simulate_paste, simulate_select_all, get_active_window_hwnd
