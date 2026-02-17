@@ -16,7 +16,40 @@ graph LR
     C --> D[Clipboard + Input APIs]
 ```
 
-Componentes clave:
+### Components
+
+* **Node.js Plugin**: A lightweight client based on the **Logitech Actions SDK**. It handles input events (`keyDown`, `keyUp`, `mouseMove`) and streams signals via WebSocket.
+* **Python Backend**: A **FastAPI/Uvicorn** server running on `localhost:8989`. It manages state, keystroke injection, and clipboard manipulation using native OS APIs.
+
+---
+
+## Installation
+
+1. **Clone the repository**: `git clone <repo-url>`
+2. **Install backend dependencies**: `pip install -r backend/requirements.txt`
+3. **Compile the backend executable**: `pyinstaller --onefile --noconsole backend/main.py` (this generates `dist/backend.exe`).
+
+### Plugin setup (Node.js / Logitech Options+)
+
+1. **Install Node.js compatible with Logitech Options+ plugin runtime**:
+   - Minimum supported for this plugin package: **Node.js 16.14+**.
+   - Recommended: use an active LTS release (`16.x`/`18.x`) when running local validation.
+2. **Install native build prerequisites (required by `robotjs`)**:
+   - **Windows**:
+     - Install **Visual Studio Build Tools 2022** with "Desktop development with C++".
+     - Install **Python 3.x** and ensure `python` is in `PATH`.
+     - Ensure `npm config get msvs_version` points to an installed Visual Studio toolchain if needed.
+   - **macOS**:
+     - `xcode-select --install`
+   - **Linux (Debian/Ubuntu)**:
+     - `sudo apt-get update && sudo apt-get install -y build-essential python3 make g++`
+3. **Install plugin dependencies deterministically**:
+   - `cd plugin`
+   - `npm ci`
+4. **Validate plugin before loading in Logitech Options+**:
+   - `npm run build` (syntax check for `index.js`)
+   - `npm run verify` (checks that `ws` and `robotjs` resolve at startup)
+5. Continue with the Logitech Options+ plugin copy/configuration steps below.
 
 - `plugin/index.js`: captura `keyDown`/`keyUp`/`mouseMove` y envía acciones al backend.
 - `backend/main.py`: expone endpoint WS, controla ciclo `paste_cycle`/`replace`/`abort` y estados por conexión.
