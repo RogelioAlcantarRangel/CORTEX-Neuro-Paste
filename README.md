@@ -1,29 +1,19 @@
-# CORTEX: The Zero-Latency Interface for Logitech MX
+# CORTEX Neuro-Paste
 
-## Vision & Philosophy
+Interfaz de baja latencia para dispositivos Logitech MX, basada en una arquitectura local:
 
-CORTEX introduces **"Speculative Execution"** (Action  Show  Refine) to replace "Wait Latency." It prioritizes immediate user feedback over system processing, adhering to the **Falling Edge Law**: providing visual feedback in .
+- Plugin Node.js (Logitech Actions SDK)
+- Backend Python/FastAPI por WebSocket en `ws://localhost:8989/cortex`
 
-### The Problem: The AI Wait-State
+El flujo principal es: **paste inmediato** (`paste_cycle`) + **refinamiento opcional** (`replace`) con abort por movimiento (`abort`).
 
-In the current era of AI tools, productivity faces a new form of friction: latency. Users must copy text, open separate tools, wait for AI responses, and paste back. This process shatters the cognitive "flow" state.
-
-### The Solution: Neuro-Paste
-
-CORTEX is a hybrid architecture (Logitech Plugin + Local Python Core) that eliminates cognitive load through the Falling Edge Law. It assumes user intent and executes immediately, refining the output in the background as the user maintains contact with the hardware.
-
----
-
-## Architecture
-
-### High-Level Diagram
+## Arquitectura
 
 ```mermaid
 graph LR
-    A[Logitech Hardware] --> B[Node.js Plugin]
-    B --WebSocket--> C[Python Core]
-    C --OS API--> D[Application]
-
+    A[Logitech Hardware] --> B[Plugin Node.js]
+    B -- WebSocket --> C[Backend Python/FastAPI]
+    C --> D[Clipboard + Input APIs]
 ```
 
 ### Components
@@ -61,122 +51,92 @@ graph LR
    - `npm run verify` (checks that `ws` and `robotjs` resolve at startup)
 5. Continue with the Logitech Options+ plugin copy/configuration steps below.
 
----
+- `plugin/index.js`: captura `keyDown`/`keyUp`/`mouseMove` y envía acciones al backend.
+- `backend/main.py`: expone endpoint WS, controla ciclo `paste_cycle`/`replace`/`abort` y estados por conexión.
+- `backend/clipboard_mgr.py`: lectura/escritura de clipboard y pipeline de transformaciones.
 
-## Usage
+## Quickstart técnico
 
-1. Run `backend.exe` (runs as a background service).
-2. Connect the Logitech plugin and map a device button to **"CORTEX Paste"**.
-3. **UX Flow**:
-* **keyDown**: Immediate Paste (equivalent to Ctrl+V).
-* **Hold (>300ms)**: Refines the pasted text (e.g., case conversion, formatting cleanup).
-* **mouseMove during hold**: Aborts the refinement to prevent unwanted data modification.
+### 1) Requisitos
 
+- Python 3.10+
+- Logitech Options+ con soporte de plugins/actions
+- Entorno objetivo: Windows 10/11 (por dependencias de input/clipboard nativas)
 
+### 2) Backend
 
----
-
-## Configuration in Logitech Options+
-
-1. **Install Logitech Options+**: Download and install from the official Logitech site if not already present.
-2. **Copy the Plugin**: Copy the entire `plugin/` folder to the Logitech Options+ plugins directory (typically `C:\Users\[User]\AppData\Local\Logitech\Logitech Options\Plugins\`).
-3. **Restart Logitech Options+**: Close and reopen the application to detect the new plugin.
-4. **Configure the Device**:
-   * Open Logitech Options+ and select your Logitech MX device.
-   * Navigate to the "Actions" tab and click "Add Action".
-   * Select "Custom Action" and choose "Run Plugin".
-   * From the plugin list, select **"CORTEX Neuro-Paste"**.
-   * Assign the action to a programmable button (e.g., the thumb button or Easy-Switch).
-   * In the plugin settings, ensure the WebSocket URL is set to `ws://localhost:8989/cortex` (default).
-5. **Verify Connection**: Launch the backend (`backend.exe`) and check the console for "WebSocket connection established". The plugin will attempt to connect automatically upon device button press.
-
-> **Note**: Ensure the backend is running before using the plugin. The plugin acts as a trigger, sending events via WebSocket to the backend. If connection fails, verify firewall settings allow localhost connections.
-
----
-
-
-## Runtime Configuration
-
-### Backend (`backend/config.json`)
-
-The backend reads runtime configuration from `backend/config.json` at startup.
-
-```json
-{
-  "ws_host": "localhost",
-  "ws_port": 8989,
-  "transform_rules": ["uppercase"]
-}
+```bash
+pip install -r backend/requirements.txt
+python backend/main.py
 ```
 
-- `ws_host`: Uvicorn bind host.
-- `ws_port`: Uvicorn bind port.
-- `transform_rules`: Ordered rules applied by `process_text`.
+Configuración en `backend/config.json`:
 
-### Plugin (`plugin/config.json`)
+- `ws_host`, `ws_port`
+- `transform_rules`
 
-The plugin reads local settings from `plugin/config.json`.
+### 3) Plugin
 
-```json
-{
-  "ws_url": "ws://localhost:8989/cortex",
-  "reconnect_ms": 1000,
-  "hold_threshold_ms": 300,
-  "mouse_abort_debounce_ms": 100
-}
-```
+1. Copiar `plugin/` al directorio de plugins de Logitech Options+.
+2. Reiniciar Logitech Options+.
+3. Asignar acción **CORTEX Neuro-Paste** a un botón.
+4. Verificar `plugin/config.json` (por defecto `ws://localhost:8989/cortex`).
 
-- `ws_url`: Backend WebSocket endpoint.
-- `reconnect_ms`: Reconnect delay when socket closes.
-- `hold_threshold_ms`: Hold duration before triggering `replace` on key up.
-- `mouse_abort_debounce_ms`: Debounce for movement-triggered abort.
+### 4) Flujo funcional esperado
 
-## Technical Script for Video Demo: Speculative Execution (Max 2 min)
+- Pulsación corta: `paste_cycle` (paste inmediato)
+- Mantener pulsado: `replace` (aplica texto refinado)
+- Movimiento durante hold: `abort` (cancela replace)
 
-### Introduction (0:00 - 0:15)
-"Welcome to CORTEX: Zero-Latency Interface for Logitech MX. Demonstrating 'Speculative Execution' – anticipate, show, refine."
+## Evidencia de latencia y claims
 
-### Architecture Overview (0:15 - 0:45)
-*Display Mermaid diagram.*
-"CORTEX integrates Logitech Actions SDK with local Python backend via WebSocket. Plugin triggers events; backend executes OS-level actions."
+Para evitar claims no verificables, este repositorio separa **objetivos** de **evidencia**:
 
-### Speculative Execution Flow (0:45 - 1:30)
-* **Immediate Trigger (keyDown)**: Button press sends 'paste_cycle'. Backend fires Ctrl+V in <5ms – user sees paste instantly.
-* **Async Refinement**: Background processing converts text (e.g., uppercase) in <10ms, no UI block.
-* **Conditional Replace (Hold)**: Hold >300ms sends 'replace'; backend applies refined text via Select All + Paste.
-* **Safety Abort**: Mouse move cancels refinement, preventing data loss.
+- Scripts de medición/auditoría:
+  - `backend/test_latency.py`
+  - `backend/audit_e2e.py`
+- Resultado versionado más reciente:
+  - `backend/latency_evidence.md`
 
-### Latency Compliance (1:30 - 1:45)
-"Total loop <16ms, matching hardware polling rate. Eliminates cognitive wait-state."
+Estado actual:
 
-### Live Demo (1:45 - 2:00)
-* Run backend.exe.
-* Configure button in Logitech Options+.
-* Copy text, press button: instant paste.
-* Hold: text refines.
-* Move mouse: aborts safely.
+- Hay pruebas unitarias del protocolo/configuración operativas.
+- Las métricas de latencia E2E requieren ejecución en entorno Windows con Logitech Options+ y hardware activo.
+- Hasta que no se actualice `backend/latency_evidence.md` con una corrida real, tratar cifras de latencia como **objetivo de demo**, no SLA contractual.
 
-"Neuro-ergonomics redefined. Thank you."
+## Limitaciones conocidas
 
----
+- Transformación por defecto orientada a demo (regla `uppercase`), según la configuración activa.
+- Dependencia fuerte del sistema operativo objetivo (Windows) para comportamiento real de input injection.
+- Las pruebas automáticas del repositorio no cubren aún benchmark E2E reproducible en CI para latencia p50/p95/p99.
+- Diferencias entre aplicaciones destino (Notepad/Office/IDE) pueden afectar timing de `replace`.
 
-## Tech Stack & Dependencies
+## Soporte y troubleshooting
 
-* **Backend**: Python 3.10+, FastAPI, Uvicorn, `pyperclip`/`win32clipboard`, `pynput`.
-* **Frontend**: Node.js (Logitech SDK).
-* **Communication**: Local WebSocket.
-* **Deployment**: Compiled via PyInstaller.
+### El plugin no conecta al backend
 
-For advanced technical details, see [`docs/manifesto.md`](https://www.google.com/search?q=docs/manifesto.md).
+- Confirmar backend activo en `localhost:8989`.
+- Revisar `plugin/config.json` (`ws_url`) y `backend/config.json` (`ws_host`/`ws_port`).
+- Reiniciar Logitech Options+ después de cambios de plugin.
 
-## Roadmap
+### `replace` falla o no se aplica
 
-* **Context Awareness**: Formatting logic based on the active window (e.g., code snippets for IDEs vs. rich text for Word).
-* **MX Ink Integration**: Supporting spatial input refinement.
-* **Local LLM Support**: Privacy-first processing using on-device models.
+- Verificar cambio de foco de ventana entre `paste_cycle` y `replace` (hay guardas de `WINDOW_MISMATCH`).
+- Revisar eventos `ack`/`status`/`error` en logs del backend.
 
-Built for **Logitech DevStudio 2026 Hackathon**. An experiment in neuro-ergonomics.
+### Validación mínima recomendada antes de demo
 
----
+1. Seguir checklist de `demo_check.md`.
+2. Ejecutar pruebas unitarias clave:
+   - `python -m pytest -q backend/test_config_unit.py backend/test_ws_protocol_unit.py backend/test_clipboard_mgr_unit.py`
+3. Revisar backlog comercial/técnico en `PLAN_CLIENTES.md`.
 
-Would you like me to create the content for the **manifesto.md** mentioned in the documentation?
+## Documentación relacionada
+
+- Guía de validación de demo: [`demo_check.md`](demo_check.md)
+- Plan de brechas para clientes: [`PLAN_CLIENTES.md`](PLAN_CLIENTES.md)
+- Evidencia de latencia versionada: [`backend/latency_evidence.md`](backend/latency_evidence.md)
+
+## Estado del proyecto
+
+Proyecto en fase de validación técnica/comercial para hackathon. La narrativa de “zero-latency” debe respaldarse siempre con evidencia actualizada en scripts + resultados versionados.

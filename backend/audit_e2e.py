@@ -1,3 +1,12 @@
+"""SMOKE TEST DE ENTORNO (manual/e2e).
+
+Este script depende de entorno Windows real, clipboard del sistema,
+foco de ventanas y backend/plugin activos. No forma parte de unit tests
+ni de CI automatizado; ejecutar manualmente como smoke test.
+"""
+
+SMOKE_TEST_SCOPE = "environment_manual"
+
 import asyncio
 import json
 import time
