@@ -41,6 +41,22 @@ graph LR
 
 ---
 
+
+## Requisitos del sistema
+
+- **Sistema operativo**: Windows 10 (21H2 o superior) o Windows 11.
+- **Python**: 3.10+.
+- **Permisos recomendados**:
+  - Ejecutar `backend.exe` con el mismo nivel de privilegios que la app objetivo (si una app corre como administrador, el backend también).
+  - Permitir acceso local al proceso para WebSocket en firewall/endpoint protection.
+- **Dependencias de entrada/automatización**:
+  - `pywin32` (incluyendo `win32gui`) para APIs nativas de ventana.
+  - `pynput` para simulación de teclado global.
+- **Conflictos comunes (antivirus/UAC)**:
+  - Algunos antivirus/EDR bloquean inyección de teclado o acceso al portapapeles; añadir exclusión para `backend.exe` puede ser necesario.
+  - UAC puede impedir eventos de teclado entre procesos con distinto nivel de integridad (normal vs admin).
+  - Si `pywin32` falla tras instalar, ejecutar `python -m pywin32_postinstall -install` en consola con privilegios.
+
 ## Usage
 
 1. Run `backend.exe` (runs as a background service).
