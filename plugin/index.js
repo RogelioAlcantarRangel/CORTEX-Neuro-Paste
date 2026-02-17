@@ -8,6 +8,7 @@ const DEFAULT_CONFIG = {
   reconnect_ms: 1000,
   hold_threshold_ms: 300,
   mouse_abort_debounce_ms: 100,
+  client_token: 'dev-token',
 };
 
 function loadPluginConfig() {
@@ -40,6 +41,10 @@ function loadPluginConfig() {
       config.mouse_abort_debounce_ms = abortDebounceMs;
     }
 
+    if (typeof parsed.client_token === 'string' && parsed.client_token.trim()) {
+      config.client_token = parsed.client_token.trim();
+    }
+
     return config;
   } catch (err) {
     return { ...DEFAULT_CONFIG };
@@ -53,6 +58,8 @@ class CortexPlugin {
     this.timer = null;
     this.lastMouseMove = 0;
     this.currentCycleId = null;
+    this.isAuthenticated = false;
+    this.authFailed = false;
     this.config = loadPluginConfig();
     this.connectWS();
   }
@@ -62,6 +69,9 @@ class CortexPlugin {
 
     this.ws.on('open', () => {
       console.log('WebSocket connected to backend');
+      this.isAuthenticated = false;
+      this.authFailed = false;
+      this.ws.send(JSON.stringify({ action: 'hello', client_token: this.config.client_token }));
     });
 
     this.ws.on('message', (raw) => {
@@ -74,6 +84,7 @@ class CortexPlugin {
 
     this.ws.on('close', () => {
       console.log('WebSocket closed, reconnecting...');
+      this.isAuthenticated = false;
       setTimeout(() => this.connectWS(), this.config.reconnect_ms);
     });
   }
@@ -97,6 +108,10 @@ class CortexPlugin {
 
     if (type === 'ack') {
       console.log(`[ACK] action=${action} cycle_id=${cycleId}`);
+      if (action === 'hello') {
+        this.isAuthenticated = true;
+        this.authFailed = false;
+      }
       return;
     }
 
@@ -107,6 +122,11 @@ class CortexPlugin {
 
     if (type === 'error') {
       console.log(`[ERROR] code=${code} action=${action} cycle_id=${cycleId}`);
+      if (['UNAUTHORIZED', 'INVALID_TOKEN', 'EXPIRED_TOKEN'].includes(code)) {
+        this.isAuthenticated = false;
+        this.authFailed = true;
+        console.log('[AUTH] Authentication failed. Check plugin/config.json token.');
+      }
       return;
     }
 
@@ -114,7 +134,13 @@ class CortexPlugin {
   }
 
   onKeyDown() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+    if (this.authFailed) {
+      console.log('[AUTH] Skipping paste_cycle due to previous auth failure.');
+      robot.keyTap('v', 'control');
+      return;
+    }
+
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.isAuthenticated) {
       this.currentCycleId = null;
       this.ws.send(JSON.stringify({ action: 'paste_cycle' }));
     } else {
@@ -129,7 +155,7 @@ class CortexPlugin {
 
   onKeyUp() {
     clearTimeout(this.timer);
-    if (this.isLongPress && this.ws && this.ws.readyState === WebSocket.OPEN) {
+    if (this.isLongPress && this.ws && this.ws.readyState === WebSocket.OPEN && this.isAuthenticated) {
       const payload = { action: 'replace' };
       if (Number.isInteger(this.currentCycleId)) {
         payload.cycle_id = this.currentCycleId;
@@ -146,7 +172,11 @@ class CortexPlugin {
     }
     this.lastMouseMove = now;
 
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+    if (this.authFailed) {
+      return;
+    }
+
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.isAuthenticated) {
       const payload = { action: 'abort' };
       if (Number.isInteger(this.currentCycleId)) {
         payload.cycle_id = this.currentCycleId;

@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 import logging
+from datetime import datetime, timezone
 from itertools import count
 
 from fastapi import FastAPI, WebSocket
@@ -22,8 +23,29 @@ window_states = {}
 abort_flags = {}
 processing_events = {}
 connection_cycle_ids = {}
+authenticated_connections = {}
 
 _connection_id_counter = count(1)
+
+
+def _build_token_index(config_tokens):
+    token_index = {}
+    for item in config_tokens:
+        token = item.get("client_token")
+        expires_at_raw = item.get("expires_at")
+        if not token or not expires_at_raw:
+            continue
+        try:
+            expires_at = datetime.fromisoformat(str(expires_at_raw).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        token_index[token] = expires_at
+    return token_index
+
+
+AUTH_TOKENS = _build_token_index(CONFIG.get("auth_tokens", []))
 
 
 def log_active_window(step: str):
@@ -90,6 +112,7 @@ async def websocket_endpoint(websocket: WebSocket):
     abort_flags[websocket] = False
     processing_events[websocket] = asyncio.Event()
     connection_cycle_ids[websocket] = 0
+    authenticated_connections[websocket] = False
 
     await send_status(websocket, "connected", extra={"connection_id": connection_id})
 
@@ -104,6 +127,57 @@ async def websocket_endpoint(websocket: WebSocket):
 
             action = message.get("action")
             requested_cycle_id = message.get("cycle_id")
+
+            if action == "hello":
+                client_token = message.get("client_token")
+                if not isinstance(client_token, str) or not client_token.strip():
+                    await send_error(
+                        websocket,
+                        "INVALID_TOKEN",
+                        "client_token faltante o inválido para handshake hello.",
+                        action=action,
+                    )
+                    continue
+
+                expires_at = AUTH_TOKENS.get(client_token.strip())
+                if not expires_at:
+                    await send_error(
+                        websocket,
+                        "INVALID_TOKEN",
+                        "Token no reconocido.",
+                        action=action,
+                    )
+                    continue
+
+                if expires_at <= datetime.now(timezone.utc):
+                    await send_error(
+                        websocket,
+                        "EXPIRED_TOKEN",
+                        "Token expirado. Rotar credencial en plugin/config.json.",
+                        action=action,
+                    )
+                    continue
+
+                authenticated_connections[websocket] = True
+                await send_ack(websocket, action)
+                await send_status(
+                    websocket,
+                    "authenticated",
+                    extra={
+                        "token_expires_at": expires_at.isoformat(),
+                        "token_rotation_seconds": CONFIG.get("token_rotation_seconds"),
+                    },
+                )
+                continue
+
+            if not authenticated_connections.get(websocket, False):
+                await send_error(
+                    websocket,
+                    "UNAUTHORIZED",
+                    "Handshake requerido. Envía action=hello con client_token válido.",
+                    action=action,
+                )
+                continue
 
             if action == "paste_cycle":
                 connection_cycle_ids[websocket] += 1
@@ -252,6 +326,8 @@ async def websocket_endpoint(websocket: WebSocket):
             del processing_events[websocket]
         if websocket in connection_cycle_ids:
             del connection_cycle_ids[websocket]
+        if websocket in authenticated_connections:
+            del authenticated_connections[websocket]
 
 
 async def process_clipboard_async(websocket: WebSocket, cycle_id: int):
