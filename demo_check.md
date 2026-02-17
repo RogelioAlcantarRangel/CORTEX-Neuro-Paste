@@ -1,52 +1,54 @@
-# Demo Check: Verifying CORTEX "Magic" for Judges
+# Demo Check: verificación de CORTEX Neuro-Paste
 
-This document provides exact steps for judges to verify the seamless, zero-latency experience of CORTEX Neuro-Paste during the Logitech DevStudio 2026 Hackathon.
+Checklist para validar la demo con jueces/clientes de forma repetible.
 
-## Prerequisites
-- Logitech MX device (e.g., MX Master 3S) connected and recognized by Logitech Options+.
-- Windows 10/11 system.
-- Backend compiled (`dist/backend.exe` exists; if not, run `pyinstaller --onefile --noconsole backend/main.py`).
+## Prerrequisitos
 
-## Step-by-Step Verification
+- Dispositivo Logitech MX reconocido por Logitech Options+.
+- Windows 10/11.
+- Backend disponible (ejecución por `python backend/main.py` o binario empaquetado).
 
-### 1. Launch Backend Service
-- Execute `dist/backend.exe` (runs silently in background).
-- Verify in Task Manager: Process "backend.exe" is running.
-- Check console output (if visible): "WebSocket server started on ws://localhost:8989/cortex".
+## 1) Levantar backend
 
-### 2. Configure Logitech Plugin
-- Open Logitech Options+.
-- Copy `plugin/` folder to `C:\Users\[User]\AppData\Local\Logitech\Logitech Options\Plugins\`.
-- Restart Logitech Options+.
-- Select MX device > Actions > Add Action > Custom Action > Run Plugin > Select "CORTEX Neuro-Paste".
-- Assign to a programmable button (e.g., thumb button).
-- Ensure WebSocket URL is `ws://localhost:8989/cortex`.
+- Iniciar backend.
+- Verificar que el endpoint WS responde en `ws://localhost:8989/cortex`.
 
-### 3. Test Basic Functionality
-- Open a text editor (e.g., Notepad).
-- Copy sample text to clipboard: "hello world".
-- Press assigned button: Text should paste immediately (<5ms).
-- Hold button >300ms: Text should transform to "HELLO WORLD" (uppercase).
-- During hold, move mouse: Refinement should abort, no change applied.
+## 2) Configurar plugin
 
-### 4. Measure Latency (Critical Metric)
-- Run `backend/test_latency.py` in a separate terminal.
-- Script simulates WebSocket messages and measures response times.
-- Expected output:
-  - Paste trigger: <5ms
-  - Async processing: <10ms
-  - Total loop: <16ms
-- Verify logs show "Latency within spec" for all steps.
+- Copiar `plugin/` al directorio de plugins de Logitech Options+.
+- Reiniciar Logitech Options+.
+- Asignar acción **CORTEX Neuro-Paste** a un botón.
+- Confirmar `ws_url = ws://localhost:8989/cortex`.
 
-### 5. Edge Case Verification
-- **Abort Safety**: During hold, move mouse – ensure no destructive action occurs.
-- **No Backend Crash**: Stop backend.exe, press button – plugin should handle gracefully (no error popups).
-- **Clipboard Integrity**: Paste complex text (with special chars), verify no corruption.
+## 3) Verificación funcional rápida
 
-### 6. Judge Feedback Points
-- **Seamless UX**: No perceived lag; feels like native OS paste.
-- **Speculative Execution**: Paste happens before processing completes.
-- **Neuro-Ergonomics**: Eliminates wait-state, maintains flow.
-- **Portability**: Single .exe, no admin rights needed.
+- Abrir editor de texto (Notepad recomendado).
+- Copiar `hello world` al clipboard.
+- Pulsación corta: debe pegar inmediatamente.
+- Hold > umbral configurado: debe aplicar transformación configurada (ej. `HELLO WORLD` si `uppercase`).
+- Movimiento durante hold: debe cancelar `replace`.
 
-If all steps pass, CORTEX demonstrates true "zero-latency" innovation. Contact team for troubleshooting.
+## 4) Evidencia de latencia (medible)
+
+- Ejecutar scripts de medición:
+  - `backend/test_latency.py`
+  - `backend/audit_e2e.py`
+- Registrar el resultado en `backend/latency_evidence.md` con:
+  - fecha/hora
+  - entorno (HW/OS)
+  - comando
+  - salida resumida (al menos promedio y máximos)
+
+> Nota: no usar cifras de latencia como claim final si no están registradas y versionadas en `backend/latency_evidence.md`.
+
+## 5) Verificación de robustez
+
+- **Abort safety:** `paste_cycle` + `abort` + `replace` no debe generar reemplazo destructivo.
+- **Sin crash visible:** desconectar backend y verificar degradación controlada en plugin.
+- **Integridad clipboard:** probar caracteres especiales y multilinea.
+
+## 6) Mensaje para demo
+
+- Enfatizar que CORTEX prioriza feedback inmediato.
+- Reportar estado real: objetivos de latencia + última evidencia versionada.
+- Si hay desviaciones, mostrar limitaciones conocidas y plan de mitigación (`PLAN_CLIENTES.md`).
