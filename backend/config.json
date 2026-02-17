@@ -1,5 +1,7 @@
 {
   "ws_host": "localhost",
   "ws_port": 8989,
-  "transform_rules": ["uppercase"]
+  "transform_rules": ["uppercase"],
+  "log_level": "INFO",
+  "log_file": "backend/backend.log"
 }
