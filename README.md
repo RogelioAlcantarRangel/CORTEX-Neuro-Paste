@@ -191,6 +191,13 @@ Valida:
 
 ---
 
+
+## Quality & Release Management
+
+- CI workflow with separate jobs for lint, unit tests, and WebSocket protocol checks: `.github/workflows/ci.yml`.
+- QA strategy, smoke test classification, compatibility matrix, and release gates: `docs/quality_strategy.md`.
+- Versioned benchmark reports per release: `reports/`.
+
 ## Tech Stack & Dependencies
 
 * **Backend**: Python 3.10+, FastAPI, Uvicorn, `pyperclip`/`win32clipboard`, `pynput`.
