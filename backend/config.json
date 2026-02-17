@@ -2,6 +2,11 @@
   "ws_host": "localhost",
   "ws_port": 8989,
   "transform_rules": ["uppercase"],
-  "log_level": "INFO",
-  "log_file": "backend/backend.log"
+  "token_rotation_seconds": 86400,
+  "auth_tokens": [
+    {
+      "client_token": "dev-token",
+      "expires_at": "2099-01-01T00:00:00+00:00"
+    }
+  ]
 }

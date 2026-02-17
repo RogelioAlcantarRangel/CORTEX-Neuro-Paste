@@ -5,6 +5,7 @@ import os
 import sys
 import types
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 HAS_FASTAPI = importlib.util.find_spec("fastapi") is not None
@@ -39,26 +40,76 @@ class WsProtocolTests(unittest.TestCase):
             del sys.modules["main"]
         cls.main = importlib.import_module("main")
 
-    def test_replace_without_cycle_returns_no_active_cycle(self):
-        with TestClient(self.main.app) as client:
-            with client.websocket_connect("/cortex") as ws:
-                ws.receive_json()  # connected
-                ws.send_text(json.dumps({"action": "replace"}))
-                ack = ws.receive_json()
-                err = ws.receive_json()
-                self.assertEqual(ack["type"], "ack")
-                self.assertEqual(err["type"], "error")
-                self.assertEqual(err["code"], "NO_ACTIVE_CYCLE")
+    def _auth_tokens(self):
+        return {
+            "dev-token": datetime.now(timezone.utc) + timedelta(hours=1),
+            "expired-token": datetime.now(timezone.utc) - timedelta(hours=1),
+        }
 
-    def test_replace_with_stale_cycle_returns_cycle_mismatch(self):
-        with patch.object(self.main, "simulate_paste", return_value=None), patch.object(
-            self.main, "read_clipboard", return_value="hola"
-        ), patch.object(self.main, "process_text", return_value="HOLA"), patch.object(
-            self.main, "write_clipboard", return_value=None
-        ), patch.object(self.main, "get_active_window_hwnd", return_value=111):
+    def _do_hello(self, ws, token="dev-token"):
+        ws.send_text(json.dumps({"action": "hello", "client_token": token}))
+        ack = ws.receive_json()
+        status = ws.receive_json()
+        self.assertEqual(ack["type"], "ack")
+        self.assertEqual(ack["action"], "hello")
+        self.assertEqual(status["type"], "status")
+        self.assertEqual(status["phase"], "authenticated")
+
+    def test_action_before_handshake_returns_unauthorized(self):
+        with patch.object(self.main, "AUTH_TOKENS", self._auth_tokens()):
             with TestClient(self.main.app) as client:
                 with client.websocket_connect("/cortex") as ws:
                     ws.receive_json()  # connected
+                    ws.send_text(json.dumps({"action": "replace"}))
+                    err = ws.receive_json()
+                    self.assertEqual(err["type"], "error")
+                    self.assertEqual(err["code"], "UNAUTHORIZED")
+
+    def test_hello_with_invalid_token_returns_invalid_token(self):
+        with patch.object(self.main, "AUTH_TOKENS", self._auth_tokens()):
+            with TestClient(self.main.app) as client:
+                with client.websocket_connect("/cortex") as ws:
+                    ws.receive_json()  # connected
+                    ws.send_text(json.dumps({"action": "hello", "client_token": "bad-token"}))
+                    err = ws.receive_json()
+                    self.assertEqual(err["type"], "error")
+                    self.assertEqual(err["code"], "INVALID_TOKEN")
+
+    def test_hello_with_expired_token_returns_expired_token(self):
+        with patch.object(self.main, "AUTH_TOKENS", self._auth_tokens()):
+            with TestClient(self.main.app) as client:
+                with client.websocket_connect("/cortex") as ws:
+                    ws.receive_json()  # connected
+                    ws.send_text(json.dumps({"action": "hello", "client_token": "expired-token"}))
+                    err = ws.receive_json()
+                    self.assertEqual(err["type"], "error")
+                    self.assertEqual(err["code"], "EXPIRED_TOKEN")
+
+    def test_replace_without_cycle_returns_no_active_cycle(self):
+        with patch.object(self.main, "AUTH_TOKENS", self._auth_tokens()):
+            with TestClient(self.main.app) as client:
+                with client.websocket_connect("/cortex") as ws:
+                    ws.receive_json()  # connected
+                    self._do_hello(ws)
+                    ws.send_text(json.dumps({"action": "replace"}))
+                    ack = ws.receive_json()
+                    err = ws.receive_json()
+                    self.assertEqual(ack["type"], "ack")
+                    self.assertEqual(err["type"], "error")
+                    self.assertEqual(err["code"], "NO_ACTIVE_CYCLE")
+
+    def test_replace_with_stale_cycle_returns_cycle_mismatch(self):
+        with patch.object(self.main, "AUTH_TOKENS", self._auth_tokens()), patch.object(
+            self.main, "simulate_paste", return_value=None
+        ), patch.object(self.main, "read_clipboard", return_value="hola"), patch.object(
+            self.main, "process_text", return_value="HOLA"
+        ), patch.object(self.main, "write_clipboard", return_value=None), patch.object(
+            self.main, "get_active_window_hwnd", return_value=111
+        ):
+            with TestClient(self.main.app) as client:
+                with client.websocket_connect("/cortex") as ws:
+                    ws.receive_json()  # connected
+                    self._do_hello(ws)
                     ws.send_text(json.dumps({"action": "paste_cycle"}))
                     ack = ws.receive_json()
                     ws.receive_json()  # step_a
